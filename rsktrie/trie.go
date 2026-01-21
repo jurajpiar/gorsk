@@ -374,3 +374,18 @@ func (t *Trie) GetPreOrderIterator() *PreOrderIterator {
 func (t *Trie) GetPostOrderIterator() *PostOrderIterator {
 	return NewPostOrderIterator(t)
 }
+
+// GetSharedPath returns the shared path of this trie node
+func (t *Trie) GetSharedPath() *TrieKeySlice {
+	return t.sharedPath
+}
+
+// GetLeft returns the left child reference
+func (t *Trie) GetLeft() *NodeReference {
+	return t.left
+}
+
+// GetRight returns the right child reference
+func (t *Trie) GetRight() *NodeReference {
+	return t.right
+}

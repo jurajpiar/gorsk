@@ -1,1 +1,7 @@
+# Compiled binaries
+acct_verify_proof
+verify_roots
+
+
+# macos
 .DS_Store

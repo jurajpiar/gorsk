@@ -30,6 +30,12 @@ func TrieKeySliceFromEncoded(src []byte, offset, keyLength, encodedLength int) *
 	return NewTrieKeySlice(expandedKey, 0, len(expandedKey))
 }
 
+// TrieKeySliceFromEncodedFull creates a TrieKeySlice from already-extracted encoded bytes
+func TrieKeySliceFromEncodedFull(encodedBytes []byte, keyLength int) *TrieKeySlice {
+	expandedKey := PathEncoderDecode(encodedBytes, keyLength)
+	return NewTrieKeySlice(expandedKey, 0, len(expandedKey))
+}
+
 func TrieKeySliceEmpty() *TrieKeySlice {
 	return NewTrieKeySlice([]byte{}, 0, 0)
 }
