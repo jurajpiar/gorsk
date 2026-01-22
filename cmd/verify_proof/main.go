@@ -29,15 +29,16 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math/big"
 	"os"
 	"strings"
 	"time"
 
+	"gorsk/ethclient"
 	"gorsk/rskblocks"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 func main() {
@@ -207,28 +208,37 @@ func main() {
 	}
 }
 
-// blockHeader represents the relevant fields from eth_getBlockByNumber response
-type blockHeader struct {
-	StateRoot string `json:"stateRoot"`
-}
-
-// getStateRoot fetches the state root from a block header
+// getStateRoot fetches the state root from a block header using the RSK ethclient
 func getStateRoot(ctx context.Context, rpcURL, blockRef string) (common.Hash, error) {
-	client, err := rpc.Dial(rpcURL)
+	client, err := ethclient.DialContext(ctx, rpcURL)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("dial: %w", err)
 	}
 	defer client.Close()
 
-	var block blockHeader
-	err = client.CallContext(ctx, &block, "eth_getBlockByNumber", blockRef, false)
+	// Convert block reference to *big.Int
+	var blockNum *big.Int
+	switch blockRef {
+	case "latest", "":
+		blockNum = nil // nil means latest
+	case "pending":
+		blockNum = big.NewInt(-1)
+	case "earliest":
+		blockNum = big.NewInt(0)
+	default:
+		// Parse hex block number
+		blockNum = new(big.Int)
+		if strings.HasPrefix(blockRef, "0x") {
+			blockNum.SetString(blockRef[2:], 16)
+		} else {
+			blockNum.SetString(blockRef, 10)
+		}
+	}
+
+	header, err := client.HeaderByNumber(ctx, blockNum)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("eth_getBlockByNumber: %w", err)
+		return common.Hash{}, fmt.Errorf("HeaderByNumber: %w", err)
 	}
 
-	if block.StateRoot == "" {
-		return common.Hash{}, fmt.Errorf("block not found or has no state root")
-	}
-
-	return common.HexToHash(block.StateRoot), nil
+	return header.Root, nil
 }
