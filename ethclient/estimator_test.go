@@ -113,8 +113,11 @@ func TestRSKGasPriceEstimatorFn(t *testing.T) {
 
 			assert.Equal(t, tt.expectedTip, tip)
 			assert.Equal(t, tt.expectedBaseFee, baseFee)
-			assert.Nil(t, blobTip, "blobTip should be nil for RSK")
-			assert.Nil(t, blobBaseFee, "blobBaseFee should be nil for RSK")
+			// Blob fees should be zero (not nil) for RSK to avoid nil pointer dereference in txmgr
+			assert.NotNil(t, blobTip, "blobTip should not be nil")
+			assert.NotNil(t, blobBaseFee, "blobBaseFee should not be nil")
+			assert.Equal(t, int64(0), blobTip.Int64(), "blobTip should be zero for RSK")
+			assert.Equal(t, int64(0), blobBaseFee.Int64(), "blobBaseFee should be zero for RSK")
 		})
 	}
 }
@@ -206,8 +209,11 @@ func TestRSKGasPriceEstimatorFnWithMinimum(t *testing.T) {
 
 			assert.Equal(t, tt.expectedTip, tip)
 			assert.Equal(t, tt.expectedBaseFee, baseFee)
-			assert.Nil(t, blobTip, "blobTip should be nil for RSK")
-			assert.Nil(t, blobBaseFee, "blobBaseFee should be nil for RSK")
+			// Blob fees should be zero (not nil) for RSK to avoid nil pointer dereference in txmgr
+			assert.NotNil(t, blobTip, "blobTip should not be nil")
+			assert.NotNil(t, blobBaseFee, "blobBaseFee should not be nil")
+			assert.Equal(t, int64(0), blobTip.Int64(), "blobTip should be zero for RSK")
+			assert.Equal(t, int64(0), blobBaseFee.Int64(), "blobBaseFee should be zero for RSK")
 		})
 	}
 }

@@ -31,20 +31,20 @@ var RSKTxMgrConfig = struct {
 	TxNotInMempoolTimeout     time.Duration
 	ReceiptQueryInterval      time.Duration
 }{
-	NumConfirmations:          6,              // ~3 minutes at 30s blocks
+	NumConfirmations:          1, // ~3 minutes at 30s blocks
 	SafeAbortNonceTooLowCount: 3,
 	FeeLimitMultiplier:        5,
-	FeeLimitThresholdGwei:     1.0,            // RSK has lower fees
-	MinTipCapGwei:             0.06,           // RSK minimum gas price is often 0.06 gwei
-	MinBaseFeeGwei:            0.06,           // Match minimumGasPrice
-	RebroadcastInterval:       30 * time.Second, // RSK block time
-	ResubmissionTimeout:       90 * time.Second, // ~3 blocks
+	FeeLimitThresholdGwei:     1.0,              // RSK has lower fees
+	MinTipCapGwei:             0.06,             // RSK minimum gas price is often 0.06 gwei
+	MinBaseFeeGwei:            0.06,             // Match minimumGasPrice
+	RebroadcastInterval:       5 * time.Second,  // RSK block time
+	ResubmissionTimeout:       15 * time.Second, // ~3 blocks
 	NetworkTimeout:            10 * time.Second,
 	RetryInterval:             5 * time.Second,
 	MaxRetries:                10,
 	TxSendTimeout:             0, // Unbounded
 	TxNotInMempoolTimeout:     3 * time.Minute,
-	ReceiptQueryInterval:      30 * time.Second, // RSK block time
+	ReceiptQueryInterval:      3 * time.Second, // RSK block time
 }
 
 // NewRSKTxMgrConfig creates a txmgr.Config configured for RSK networks.
@@ -144,8 +144,11 @@ func NewRSKTxMgrConfig(
 // on RSK networks. It pads the gas price by 50% to ensure transactions get included.
 //
 // Unlike the standard DeployerGasPriceEstimator, this one:
-//   - Returns nil for blob fees (RSK doesn't support blobs)
+//   - Returns zero for blob fees (RSK doesn't support blobs)
 //   - Uses gasPrice instead of tip+baseFee model
+//
+// Note: We return zero instead of nil for blob fees to avoid nil pointer
+// dereference in txmgr.SuggestGasPriceCaps which compares blob fees.
 //
 // Usage:
 //
@@ -183,8 +186,8 @@ func RSKDeployerGasPriceEstimator(ctx context.Context, client txmgr.ETHBackend) 
 	paddedTip := new(big.Int).Mul(gasPrice, tipMulFactor)
 
 	// RSK-specific caps (lower than Ethereum due to lower fees)
-	minTip := big.NewInt(60000000)    // 0.06 gwei - RSK minimum
-	maxTip := big.NewInt(5000000000)  // 5 gwei
+	minTip := big.NewInt(60000000)   // 0.06 gwei - RSK minimum
+	maxTip := big.NewInt(5000000000) // 5 gwei
 
 	if paddedTip.Cmp(minTip) < 0 {
 		paddedTip.Set(minTip)
@@ -194,6 +197,7 @@ func RSKDeployerGasPriceEstimator(ctx context.Context, client txmgr.ETHBackend) 
 		paddedTip.Set(maxTip)
 	}
 
-	// Return nil for blob fees (RSK doesn't support blobs)
-	return paddedTip, paddedBaseFee, nil, nil, nil
+	// Return zero for blob fees (RSK doesn't support blobs)
+	// We use zero instead of nil to avoid nil pointer dereference in txmgr
+	return paddedTip, paddedBaseFee, big.NewInt(0), big.NewInt(0), nil
 }

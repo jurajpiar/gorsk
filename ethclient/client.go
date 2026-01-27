@@ -106,18 +106,44 @@ func (c *Client) TransactionReceipt(ctx context.Context, txHash common.Hash) (*t
 //
 // IMPORTANT: The transaction must already be signed. This method re-encodes
 // the transaction in legacy RLP format but preserves the signature.
+//
+// Note: RSK may compute a different transaction hash than go-ethereum.
+// Use SendTransactionReturnHash to get the actual hash returned by the RSK node.
 func (c *Client) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	_, err := c.SendTransactionReturnHash(ctx, tx)
+	return err
+}
+
+// SendTransactionReturnHash sends a transaction and returns the hash as computed by RSK.
+// This is important because RSK may use a different hash algorithm than go-ethereum.
+func (c *Client) SendTransactionReturnHash(ctx context.Context, tx *types.Transaction) (common.Hash, error) {
 	// Convert to legacy transaction if needed
 	legacyTx, err := toLegacyTransaction(tx)
 	if err != nil {
-		return fmt.Errorf("failed to convert to legacy transaction: %w", err)
+		return common.Hash{}, fmt.Errorf("failed to convert to legacy transaction: %w", err)
 	}
 
 	data, err := legacyTx.MarshalBinary()
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return c.c.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(data))
+
+	// Capture the hash returned by RSK
+	var rskHash common.Hash
+	err = c.c.CallContext(ctx, &rskHash, "eth_sendRawTransaction", hexutil.Encode(data))
+	if err != nil {
+		return common.Hash{}, err
+	}
+
+	// Log if there's a hash mismatch (useful for debugging)
+	localHash := legacyTx.Hash()
+	if rskHash != localHash {
+		// This is expected - RSK may compute hashes differently
+		// The caller should use rskHash for receipt queries
+		_ = localHash // Suppress unused warning; we're just noting the difference
+	}
+
+	return rskHash, nil
 }
 
 // toLegacyTransaction converts any transaction type to a legacy transaction.

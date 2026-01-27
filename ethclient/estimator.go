@@ -12,7 +12,10 @@ import (
 // Since RSK doesn't support EIP-1559:
 //   - tip (gasTipCap) is set to the result of eth_gasPrice
 //   - baseFee is set to minimumGasPrice from the header (or gasPrice as fallback)
-//   - blobTipCap and blobBaseFee are nil (RSK doesn't support blobs)
+//   - blobTipCap and blobBaseFee are zero (RSK doesn't support blobs)
+//
+// Note: We return zero instead of nil for blob fees to avoid nil pointer
+// dereference in txmgr.SuggestGasPriceCaps which compares blob fees.
 //
 // This function is compatible with txmgr.GasPriceEstimatorFn and can be passed
 // to txmgr.Config.GasPriceEstimatorFn when using Client as the backend.
@@ -48,9 +51,9 @@ func RSKGasPriceEstimatorFn(ctx context.Context, backend txmgr.ETHBackend) (*big
 	// For RSK:
 	// - tip = gasPrice (since there's no separate priority fee concept)
 	// - baseFee = minimumGasPrice from header
-	// - blobTipCap = nil (no blob support)
-	// - blobBaseFee = nil (no blob support)
-	return gasPrice, baseFee, nil, nil, nil
+	// - blobTipCap = 0 (no blob support, but non-nil to avoid panic in txmgr)
+	// - blobBaseFee = 0 (no blob support, but non-nil to avoid panic in txmgr)
+	return gasPrice, baseFee, big.NewInt(0), big.NewInt(0), nil
 }
 
 // RSKGasPriceEstimatorFnWithMinimum returns a GasPriceEstimatorFn that enforces
