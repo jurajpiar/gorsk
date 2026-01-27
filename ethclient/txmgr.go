@@ -31,20 +31,20 @@ var RSKTxMgrConfig = struct {
 	TxNotInMempoolTimeout     time.Duration
 	ReceiptQueryInterval      time.Duration
 }{
-	NumConfirmations:          1, // ~3 minutes at 30s blocks
+	NumConfirmations:          1, // ~1 minute at 30s blocks
 	SafeAbortNonceTooLowCount: 3,
 	FeeLimitMultiplier:        5,
-	FeeLimitThresholdGwei:     1.0,              // RSK has lower fees
-	MinTipCapGwei:             0.06,             // RSK minimum gas price is often 0.06 gwei
-	MinBaseFeeGwei:            0.06,             // Match minimumGasPrice
-	RebroadcastInterval:       5 * time.Second,  // RSK block time
-	ResubmissionTimeout:       15 * time.Second, // ~3 blocks
+	FeeLimitThresholdGwei:     1.0,             // RSK has lower fees
+	MinTipCapGwei:             0.06,            // RSK minimum gas price is often 0.06 gwei
+	MinBaseFeeGwei:            0.06,            // Match minimumGasPrice
+	RebroadcastInterval:       1 * time.Second, // RSK block time
+	ResubmissionTimeout:       1 * time.Second, // ~1 block
 	NetworkTimeout:            10 * time.Second,
-	RetryInterval:             5 * time.Second,
+	RetryInterval:             1 * time.Second,
 	MaxRetries:                10,
 	TxSendTimeout:             0, // Unbounded
 	TxNotInMempoolTimeout:     3 * time.Minute,
-	ReceiptQueryInterval:      3 * time.Second, // RSK block time
+	ReceiptQueryInterval:      1 * time.Second, // RSK block time
 }
 
 // NewRSKTxMgrConfig creates a txmgr.Config configured for RSK networks.
