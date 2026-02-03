@@ -157,17 +157,17 @@ func NewRSKTxMgrConfig(
 //	    GasPriceEstimatorFn: ethclient.RSKDeployerGasPriceEstimator,
 //	    // ... other config
 //	}
-func RSKDeployerGasPriceEstimator(ctx context.Context, client txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+func RSKDeployerGasPriceEstimator(ctx context.Context, client txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, error) {
 	// Get current gas price from RSK node
-	gasPrice, err := client.SuggestGasTipCap(ctx)
+	gasPrice, err := client.SuggestGasPrice(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to get gas price: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to get gas price: %w", err)
 	}
 
 	// Get header for minimumGasPrice (mapped to BaseFee)
 	chainHead, err := client.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to get block: %w", err)
+		return nil, nil, nil, fmt.Errorf("failed to get block: %w", err)
 	}
 
 	baseFee := chainHead.BaseFee
@@ -199,5 +199,5 @@ func RSKDeployerGasPriceEstimator(ctx context.Context, client txmgr.ETHBackend) 
 
 	// Return zero for blob fees (RSK doesn't support blobs)
 	// We use zero instead of nil to avoid nil pointer dereference in txmgr
-	return paddedTip, paddedBaseFee, big.NewInt(0), big.NewInt(0), nil
+	return paddedTip, paddedBaseFee, big.NewInt(0), nil
 }

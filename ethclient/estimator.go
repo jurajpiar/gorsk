@@ -27,18 +27,18 @@ import (
 //	    GasPriceEstimatorFn: ethclient.RSKGasPriceEstimatorFn,
 //	    // ... other config
 //	}
-func RSKGasPriceEstimatorFn(ctx context.Context, backend txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
+func RSKGasPriceEstimatorFn(ctx context.Context, backend txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, error) {
 	// Get the current gas price from the network
 	// In RSK, eth_gasPrice returns the suggested gas price for transactions
-	gasPrice, err := backend.SuggestGasTipCap(ctx)
+	gasPrice, err := backend.SuggestGasPrice(ctx)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Get the header to extract minimumGasPrice (mapped to BaseFee)
 	head, err := backend.HeaderByNumber(ctx, nil)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Use minimumGasPrice (stored in BaseFee) as the base fee
@@ -53,7 +53,7 @@ func RSKGasPriceEstimatorFn(ctx context.Context, backend txmgr.ETHBackend) (*big
 	// - baseFee = minimumGasPrice from header
 	// - blobTipCap = 0 (no blob support, but non-nil to avoid panic in txmgr)
 	// - blobBaseFee = 0 (no blob support, but non-nil to avoid panic in txmgr)
-	return gasPrice, baseFee, big.NewInt(0), big.NewInt(0), nil
+	return gasPrice, baseFee, big.NewInt(0), nil
 }
 
 // RSKGasPriceEstimatorFnWithMinimum returns a GasPriceEstimatorFn that enforces
@@ -72,10 +72,10 @@ func RSKGasPriceEstimatorFn(ctx context.Context, backend txmgr.ETHBackend) (*big
 //	    // ... other config
 //	}
 func RSKGasPriceEstimatorFnWithMinimum(minGasPrice *big.Int) txmgr.GasPriceEstimatorFn {
-	return func(ctx context.Context, backend txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, *big.Int, error) {
-		tip, baseFee, blobTip, blobBaseFee, err := RSKGasPriceEstimatorFn(ctx, backend)
+	return func(ctx context.Context, backend txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, error) {
+		tip, baseFee, blobTip, err := RSKGasPriceEstimatorFn(ctx, backend)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		// Enforce minimum gas price if specified
@@ -88,6 +88,6 @@ func RSKGasPriceEstimatorFnWithMinimum(minGasPrice *big.Int) txmgr.GasPriceEstim
 			}
 		}
 
-		return tip, baseFee, blobTip, blobBaseFee, nil
+		return tip, baseFee, blobTip, nil
 	}
 }
