@@ -50,6 +50,13 @@ func (m *mockETHBackend) SuggestGasTipCap(ctx context.Context) (*big.Int, error)
 	return m.gasTipCap, nil
 }
 
+func (m *mockETHBackend) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
+	if m.gasTipErr != nil {
+		return nil, m.gasTipErr
+	}
+	return m.gasTipCap, nil
+}
+
 func (m *mockETHBackend) BlobBaseFee(ctx context.Context) (*big.Int, error) {
 	return nil, ErrBlobsNotSupported
 }
@@ -108,15 +115,13 @@ func TestRSKGasPriceEstimatorFn(t *testing.T) {
 				},
 			}
 
-			tip, baseFee, blobTip, blobBaseFee, err := RSKGasPriceEstimatorFn(context.Background(), backend)
+			tip, baseFee, blobBaseFee, err := RSKGasPriceEstimatorFn(context.Background(), backend)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.expectedTip, tip)
 			assert.Equal(t, tt.expectedBaseFee, baseFee)
 			// Blob fees should be zero (not nil) for RSK to avoid nil pointer dereference in txmgr
-			assert.NotNil(t, blobTip, "blobTip should not be nil")
 			assert.NotNil(t, blobBaseFee, "blobBaseFee should not be nil")
-			assert.Equal(t, int64(0), blobTip.Int64(), "blobTip should be zero for RSK")
 			assert.Equal(t, int64(0), blobBaseFee.Int64(), "blobBaseFee should be zero for RSK")
 		})
 	}
@@ -128,7 +133,7 @@ func TestRSKGasPriceEstimatorFn_Errors(t *testing.T) {
 			gasTipErr: assert.AnError,
 		}
 
-		_, _, _, _, err := RSKGasPriceEstimatorFn(context.Background(), backend)
+		_, _, _, err := RSKGasPriceEstimatorFn(context.Background(), backend)
 		assert.Error(t, err)
 	})
 
@@ -138,7 +143,7 @@ func TestRSKGasPriceEstimatorFn_Errors(t *testing.T) {
 			headerErr: assert.AnError,
 		}
 
-		_, _, _, _, err := RSKGasPriceEstimatorFn(context.Background(), backend)
+		_, _, _, err := RSKGasPriceEstimatorFn(context.Background(), backend)
 		assert.Error(t, err)
 	})
 }
@@ -204,15 +209,13 @@ func TestRSKGasPriceEstimatorFnWithMinimum(t *testing.T) {
 			}
 
 			estimatorFn := RSKGasPriceEstimatorFnWithMinimum(tt.minGasPrice)
-			tip, baseFee, blobTip, blobBaseFee, err := estimatorFn(context.Background(), backend)
+			tip, baseFee, blobBaseFee, err := estimatorFn(context.Background(), backend)
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.expectedTip, tip)
 			assert.Equal(t, tt.expectedBaseFee, baseFee)
 			// Blob fees should be zero (not nil) for RSK to avoid nil pointer dereference in txmgr
-			assert.NotNil(t, blobTip, "blobTip should not be nil")
 			assert.NotNil(t, blobBaseFee, "blobBaseFee should not be nil")
-			assert.Equal(t, int64(0), blobTip.Int64(), "blobTip should be zero for RSK")
 			assert.Equal(t, int64(0), blobBaseFee.Int64(), "blobBaseFee should be zero for RSK")
 		})
 	}
@@ -224,6 +227,6 @@ func TestRSKGasPriceEstimatorFnWithMinimum_Error(t *testing.T) {
 	}
 
 	estimatorFn := RSKGasPriceEstimatorFnWithMinimum(big.NewInt(1000000000))
-	_, _, _, _, err := estimatorFn(context.Background(), backend)
+	_, _, _, err := estimatorFn(context.Background(), backend)
 	assert.Error(t, err)
 }
