@@ -30,7 +30,8 @@ import (
 func RSKGasPriceEstimatorFn(ctx context.Context, backend txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, error) {
 	// Get the current gas price from the network
 	// In RSK, eth_gasPrice returns the suggested gas price for transactions
-	gasPrice, err := backend.SuggestGasPrice(ctx)
+	// We use SuggestGasTipCap which maps to eth_gasPrice for RSK clients
+	gasPrice, err := backend.SuggestGasTipCap(ctx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

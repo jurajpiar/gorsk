@@ -159,7 +159,8 @@ func NewRSKTxMgrConfig(
 //	}
 func RSKDeployerGasPriceEstimator(ctx context.Context, client txmgr.ETHBackend) (*big.Int, *big.Int, *big.Int, error) {
 	// Get current gas price from RSK node
-	gasPrice, err := client.SuggestGasPrice(ctx)
+	// We use SuggestGasTipCap which maps to eth_gasPrice for RSK clients
+	gasPrice, err := client.SuggestGasTipCap(ctx)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to get gas price: %w", err)
 	}
