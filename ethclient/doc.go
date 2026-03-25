@@ -84,13 +84,19 @@
 //
 // # Gas Price Estimators
 //
-// This package provides three gas price estimator functions:
+// This package provides four gas price estimator functions:
 //
 //   - RSKGasPriceEstimatorFn: Basic estimator that uses eth_gasPrice and
 //     minimumGasPrice from the header. Returns nil for blob fees.
 //
 //   - RSKGasPriceEstimatorFnWithMinimum: Wrapper that enforces minimum gas
 //     prices for networks with very low fees.
+//
+//   - RSKGasPriceEstimatorFnWithMinimumLegacyGasPrice: For txmgr with
+//     UseLegacyTx, on-chain gasPrice is tip+2*baseFee. RSKGasPriceEstimatorFn
+//     uses tip=0, so this wrapper floors baseFee at ceil(minWei/2) so the
+//     effective legacy gas price is at least minWei (without incorrectly
+//     bumping tip from zero).
 //
 //   - RSKDeployerGasPriceEstimator: Pads gas prices by 50% and multiplies
 //     tip by 5x (capped at 5 gwei) for reliable contract deployments.
