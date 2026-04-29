@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum-optimism/optimism/op-service/rsk/gorsk/rsktrie"
+	"gorsk/rsktrie"
 
 	"github.com/ethereum/go-ethereum/common"
 )

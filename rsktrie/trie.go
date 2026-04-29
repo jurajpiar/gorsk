@@ -65,9 +65,11 @@ func (t *Trie) GetByKeySlice(key *TrieKeySlice) []byte {
 }
 
 func (t *Trie) GetValue() []byte {
-	if t.value == nil && t.valueLength > 0 {
-		// retrieve long value
-		// TODO: Implement long value retrieval logic
+	if t.value == nil && t.valueLength > 0 && t.valueHash != nil {
+		// Retrieve long value from store
+		if t.store != nil {
+			t.value = t.store.RetrieveValue(t.valueHash)
+		}
 	}
 	if t.value == nil {
 		return nil

@@ -27,7 +27,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/ethereum-optimism/optimism/op-service/rsk/gorsk/rsktrie"
+	"gorsk/rsktrie"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"

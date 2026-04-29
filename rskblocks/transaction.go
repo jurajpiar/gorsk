@@ -291,6 +291,11 @@ func (tx *Transaction) To() *common.Address {
 	return &to
 }
 
+// RawSignatureValues returns the V, R, S signature values of the transaction.
+func (tx *Transaction) RawSignatureValues() (v, r, s *big.Int) {
+	return tx.data.V, tx.data.R, tx.data.S
+}
+
 func (tx *Transaction) WithSignature(signer Signer, sig []byte) (*Transaction, error) {
 	// Stub for simplicity if needed, but for now we might expose V,R,S setters or assume decoded
 	return nil, nil

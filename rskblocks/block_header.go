@@ -2,6 +2,7 @@ package rskblocks
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -277,4 +278,143 @@ func keccak256Hash(data []byte) common.Hash {
 	var hash common.Hash
 	h.Sum(hash[:0])
 	return hash
+}
+
+// DecodeRLPBlockHeader decodes an RLP-encoded RSK block header.
+// RSK headers are encoded as a flat RLP list with at least 15 mandatory fields,
+// followed by optional fields (ummRoot, edges, merged mining data).
+// This decoder extracts the fields needed for fault proof verification.
+func DecodeRLPBlockHeader(data []byte) (*BlockHeader, error) {
+	// RSK block headers are RLP lists of raw items.
+	// We decode into a list of raw RLP values, then parse each field.
+	var fields []rlp.RawValue
+	if err := rlp.DecodeBytes(data, &fields); err != nil {
+		return nil, fmt.Errorf("decode RLP list: %w", err)
+	}
+
+	if len(fields) < 15 {
+		return nil, fmt.Errorf("RSK header needs at least 15 fields, got %d", len(fields))
+	}
+
+	h := &BlockHeader{}
+
+	// Field 0: parentHash (32 bytes)
+	if err := rlp.DecodeBytes(fields[0], &h.ParentHash); err != nil {
+		return nil, fmt.Errorf("decode parentHash: %w", err)
+	}
+
+	// Field 1: unclesHash (32 bytes)
+	if err := rlp.DecodeBytes(fields[1], &h.UnclesHash); err != nil {
+		return nil, fmt.Errorf("decode unclesHash: %w", err)
+	}
+
+	// Field 2: coinbase (20 bytes, or empty for zero address)
+	var coinbaseBytes []byte
+	if err := rlp.DecodeBytes(fields[2], &coinbaseBytes); err != nil {
+		return nil, fmt.Errorf("decode coinbase: %w", err)
+	}
+	if len(coinbaseBytes) > 0 {
+		h.Coinbase = common.BytesToAddress(coinbaseBytes)
+	}
+
+	// Field 3: stateRoot (32 bytes)
+	if err := rlp.DecodeBytes(fields[3], &h.StateRoot); err != nil {
+		return nil, fmt.Errorf("decode stateRoot: %w", err)
+	}
+
+	// Field 4: txTrieRoot (32 bytes)
+	if err := rlp.DecodeBytes(fields[4], &h.TxTrieRoot); err != nil {
+		return nil, fmt.Errorf("decode txTrieRoot: %w", err)
+	}
+
+	// Field 5: receiptTrieRoot (32 bytes)
+	if err := rlp.DecodeBytes(fields[5], &h.ReceiptTrieRoot); err != nil {
+		return nil, fmt.Errorf("decode receiptTrieRoot: %w", err)
+	}
+
+	// Field 6: logsBloom (256 bytes) or extensionData (for V1/V2 compressed)
+	var bloomOrExt []byte
+	if err := rlp.DecodeBytes(fields[6], &bloomOrExt); err != nil {
+		return nil, fmt.Errorf("decode logsBloom/extensionData: %w", err)
+	}
+	if len(bloomOrExt) == 256 {
+		copy(h.LogsBloom[:], bloomOrExt)
+	}
+	// If it's extensionData (shorter), we don't need to decode it further
+	// for fault proof purposes — we just need TxTrieRoot and ReceiptTrieRoot.
+
+	// Field 7: difficulty
+	h.Difficulty = decodeBigInt(fields[7])
+
+	// Field 8: number
+	h.Number = decodeBigInt(fields[8])
+
+	// Field 9: gasLimit (raw bytes — RSK encodes as minimal bytes)
+	if err := rlp.DecodeBytes(fields[9], &h.GasLimit); err != nil {
+		return nil, fmt.Errorf("decode gasLimit: %w", err)
+	}
+
+	// Field 10: gasUsed
+	h.GasUsed = decodeBigInt(fields[10])
+
+	// Field 11: timestamp
+	h.Timestamp = decodeBigInt(fields[11])
+
+	// Field 12: extraData
+	if err := rlp.DecodeBytes(fields[12], &h.ExtraData); err != nil {
+		return nil, fmt.Errorf("decode extraData: %w", err)
+	}
+
+	// Field 13: paidFees
+	h.PaidFees = decodeBigInt(fields[13])
+
+	// Field 14: minimumGasPrice
+	h.MinimumGasPrice = decodeBigInt(fields[14])
+
+	// Remaining fields are optional and vary by version/network.
+	// We parse what we can but don't fail on unknown fields.
+	idx := 15
+
+	// Field 15: uncleCount (if present)
+	if idx < len(fields) {
+		uc := decodeBigInt(fields[idx])
+		if uc != nil {
+			h.UncleCount = int(uc.Int64())
+		}
+		idx++
+	}
+
+	// Remaining fields could be: ummRoot, edges, merged mining header/proof/coinbase.
+	// For fault proof purposes we primarily need TxTrieRoot and ReceiptTrieRoot
+	// which we already have. Parse merged mining fields if present.
+	for idx < len(fields) {
+		var raw []byte
+		if err := rlp.DecodeBytes(fields[idx], &raw); err != nil {
+			idx++
+			continue
+		}
+		// Heuristic: merged mining header is typically 80 bytes (Bitcoin block header)
+		if len(raw) == 80 && h.BitcoinMergedMiningHeader == nil {
+			h.BitcoinMergedMiningHeader = raw
+		} else if h.BitcoinMergedMiningHeader != nil && h.BitcoinMergedMiningMerkleProof == nil {
+			h.BitcoinMergedMiningMerkleProof = raw
+		} else if h.BitcoinMergedMiningMerkleProof != nil && h.BitcoinMergedMiningCoinbaseTransaction == nil {
+			h.BitcoinMergedMiningCoinbaseTransaction = raw
+		}
+		idx++
+	}
+
+	return h, nil
+}
+
+// decodeBigInt decodes an RLP-encoded big.Int field. Returns nil for empty values.
+func decodeBigInt(raw rlp.RawValue) *big.Int {
+	var b []byte
+	if err := rlp.DecodeBytes(raw, &b); err != nil {
+		return new(big.Int)
+	}
+	if len(b) == 0 {
+		return new(big.Int)
+	}
+	return new(big.Int).SetBytes(b)
 }
